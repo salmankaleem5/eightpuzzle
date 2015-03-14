@@ -1,11 +1,29 @@
 package eightpuzzle;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
+
 public class EightPuzzle {
 	private int[][] board;
+	private HashMap<Integer, String> solution;
 	
 	public EightPuzzle(){
 		board = new int[3][3];
+		setupSolution();
 		setupBoard();
+	}
+	
+	public void setupSolution(){
+		solution = new HashMap<Integer, String>(8);
+		solution.put(1, "0,1");
+		solution.put(2, "0,2");
+		solution.put(3, "1,0");
+		solution.put(4, "1,1");
+		solution.put(5, "1,2");
+		solution.put(6, "2,0");
+		solution.put(7, "2,1");
+		solution.put(8, "2,2");
 	}
 	
 	public int random(int min, int max){
@@ -15,13 +33,15 @@ public class EightPuzzle {
 	}
 	
 	public void setupBoard(){
-		while( isBoardFull() == false ){
+		Set<Integer> nums = solution.keySet();
+		Iterator<Integer> itr = nums.iterator();
+		while( isBoardFull() == false && itr.hasNext() ){
 			int row = random(0,2);
 			int col = random(0,2);
-			//System.out.println(row+","+col);
-			board[row][col] = 1;
+			if( board[row][col] == 0 ){
+				board[row][col] = itr.next();	
+			}
 		}
-		printBoard();
 	}
 	
 	public boolean isBoardFull(){
@@ -59,6 +79,43 @@ public class EightPuzzle {
     	return destination;
     }
     
+    public int evaluate(int[][] b){
+    	int score = 0;
+    	for(int i=0;i<3;i++){
+    		for(int j=0;j<3;j++){
+    			int current = b[i][j];
+    			if( current != 0 ){
+    				String properXY = solution.get(current);
+    				String[] coord = properXY.split(",");
+    				int diffRow = Math.abs(Integer.parseInt(coord[0])-i);
+    				int diffCol = Math.abs(Integer.parseInt(coord[1])-j);
+    				score += diffRow+diffCol;
+    			}
+    		}
+    	}
+    	return score;
+    }
+    
+    public String possibleMoves( int[][] b ){
+    	
+    }
+    
+    public int[][] getNeighbors(int[][] b){
+    	int x = 0; int y = 0;
+    	outerloop:
+    	for(int i=0;i<3;i++){
+    		for(int j=0;j<3;j++){
+    			int current = b[i][j];
+    			if( current == 0 ){
+    				x=i;
+    				y=j;
+    				break outerloop;
+    			}
+    		}
+    	}     	
+    	return b;
+    }
+    
     public int[][] hillClimbing(){
     	int[][] current = new int[3][3];
     	current = copyOf(board, current);
@@ -76,6 +133,7 @@ public class EightPuzzle {
     
     public static void main(String[] args){
     	EightPuzzle p = new EightPuzzle();
-    	
+    	p.printBoard();
+    	System.out.println(p.evaluate(p.board));
     }
 }
