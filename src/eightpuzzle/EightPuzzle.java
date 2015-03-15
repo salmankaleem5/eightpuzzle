@@ -1,9 +1,18 @@
 package eightpuzzle;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class EightPuzzle {
 	private int[][] board, goalBoard;
@@ -166,6 +175,24 @@ public class EightPuzzle {
     	return copy;
     }
     
+    public int[][] generateRandomNeighbor(int[][] b){
+    	int[][] copy = new int[3][3];
+    	copy = copyOf(b, copy);
+    	
+		int row1 = random(0,2);
+		int col1 = random(0,2);
+		int element1 = copy[row1][col1];
+		
+		int row2 = random(0,2);
+		int col2 = random(0,2);
+		int element2 = copy[row2][col2];
+		
+		copy[row1][col1] = element2;
+		copy[row2][col2] = element1;
+    	
+    	return copy;
+    }
+    
     public ArrayList<Pair<Integer, Integer>> candidates(int[][] b){
     	Pair<Integer, Integer> zeroPos = positionOfZero(b);
     	int zeroRow = zeroPos.getR(); int zeroCol = zeroPos.getC();
@@ -220,12 +247,45 @@ public class EightPuzzle {
     	return board;
     }
     
-    public int[][] hillClimbing(){
+    public int[] hillClimbing_results(){
     	int[][] current = new int[3][3];
-    	current = copyOf(board, current);
+    	//current = copyOf(board, current);
+    	current = setupBoard(current);
+    	int[][] neighbor = new int[3][3];
+    	int searchCost = 0;
+    	boolean flag = true;
+    	while(flag){
+    		searchCost++;
+    		neighbor = getBestNeighbor(current);
+    		int neighborScore = evaluate(neighbor);
+    		int currentScore = evaluate(current);
+    		if( neighborScore >= currentScore || isSolution(current) ){
+    			flag = false;
+    			int solved = 0;
+    			if( isSolution(current) ){
+    				solved = 1;
+    			}
+    			return new int[]{searchCost,solved};
+    			/*System.out.println("Current is the best");
+    			printBoard(current);
+    			System.out.println("Final score: "+currentScore);
+    			System.out.println("Search cost: "+searchCost);*/
+    		} else {
+    			current = copyOf(neighbor, current);
+    			/*System.out.println("There's a better neighbor, copy it and run again");
+    			System.out.println("Neighbor score: "+neighborScore);*/
+    			
+    		}
+    	}
+		return null;
+    }
+    
+    public int[][] hillClimbing(int[][] b){
+    	int[][] current = new int[3][3];
+    	current = copyOf(b, current);
     	
     	int[][] neighbor = new int[3][3];
-    	
+    	int searchCost = 0;
     	boolean flag = true;
     	while(flag){
     		neighbor = getBestNeighbor(current);
@@ -233,43 +293,184 @@ public class EightPuzzle {
     		int currentScore = evaluate(current);
     		if( neighborScore >= currentScore || isSolution(current) ){
     			flag = false;
-    			System.out.println("Current is the best");
-    			printBoard(current);
-    			System.out.println("Final score: "+currentScore);
+    			return current;
+    			//System.out.println("Current is the best");
+    			//printBoard(current);
+    			//System.out.println("Final score: "+currentScore);
+    			//System.out.println("Search cost: "+searchCost);
     		} else {
-    			System.out.println("There's a better neighbor, copy it and run again");
+        		searchCost++;
+    			//System.out.println("There's a better neighbor, copy it and run again");
     			current = copyOf(neighbor, current);
-    			System.out.println("Neighbor score: "+neighborScore);
+    			//System.out.println("Neighbor score: "+neighborScore);
     			
     		}
     	}
 		return null;
-    }
+    }    
     
     public int[][] hillClimbingRR(){
     	int[][] bestBoard = new int[3][3];
     	int bestBoardScore = Integer.MAX_VALUE;
-
+    	
     	long endTime = System.currentTimeMillis() + (6000);
+    	int searchCost = 0;
     	while(System.currentTimeMillis() < endTime){
     		int[][] current = new int[3][3];
     		current = setupBoard(current);
+    		current = hillClimbing(current);
     		int currentScore = evaluate(current);
     		if( currentScore < bestBoardScore ){
+        		searchCost++;
     			bestBoardScore = currentScore;
     			bestBoard = copyOf(current, bestBoard);
     		}
     	}
-
+    	printBoard(bestBoard);
+    	System.out.println("Search cost: "+searchCost);
     	return bestBoard;
+    }
+    
+    public int[] hillClimbing_random_results(){
+    	int[][] bestBoard = new int[3][3];
+    	int bestBoardScore = Integer.MAX_VALUE;
+    	
+    	long endTime = System.currentTimeMillis() + (6000);
+    	int searchCost = 0;
+    	int optimalCost = 0;
+    	while(System.currentTimeMillis() < endTime){
+    		int[][] current = new int[3][3];
+    		current = setupBoard(current);
+    		optimalCost = evaluate(current);
+    		current = hillClimbing(current);
+    		int currentScore = evaluate(current);
+    		if( currentScore < bestBoardScore ){
+    			searchCost++;
+    			bestBoardScore = currentScore;
+    			bestBoard = copyOf(current, bestBoard);
+    		}
+    	}
+    	//printBoard(bestBoard);
+    	//System.out.println("Search cost: "+searchCost);
+    	int solved = 0;
+    	if( isSolution(bestBoard) ){
+    		solved = 1;
+    	}
+    	return new int[]{searchCost, optimalCost, solved};    	
+    }
+    
+    public double acceptanceProbability(int currentScore, int neighborScore, double temp){
+    	return Math.exp((currentScore - neighborScore) / temp);
+    }
+    
+    public int[][] simulatedAnnealing(){
+    	int[][] current = new int[3][3];
+		current = setupBoard(current);
+		//printBoard(current);
+		int currentScore = evaluate(current);
+		//System.out.println(currentScore);
+		double t=9000000;
+		double tmin=0.0001;
+		double alpha=0.9;
+		int searchCost = 0;
+    	while(t>tmin){
+    		int[][] neighbor = new int[3][3];
+    		neighbor = generateRandomNeighbor(current);
+    		int neighborScore = evaluate(neighbor);
+    		if( neighborScore < currentScore ){
+        		searchCost++;
+    			current = copyOf(neighbor, current);
+    		} else if( neighborScore > currentScore ){
+    			double acceptanceProbability = acceptanceProbability(currentScore,neighborScore,t); 
+    			if( acceptanceProbability > Math.random() ){
+    	    		searchCost++;
+    				current = copyOf(neighbor, current);
+    			}
+    		}
+    		t=t*alpha;
+    	}
+    	//printBoard(current);
+    	//System.out.println("Search cost:"+searchCost);
+    	//System.out.println(evaluate(current));
+    	return current;
+    }
+    
+    public int[] sA_results(){
+    	int[][] current = new int[3][3];
+		current = setupBoard(current);
+		int currentScore = evaluate(current);
+		double t=99990000;
+		double tmin=0.0001;
+		double alpha=0.9;
+		int searchCost = 0;
+		int[][] neighbor = new int[3][3];
+		boolean flag = true;
+		int solved = 0;
+    	while(flag){
+    		if( isSolution(current) ){
+    			solved = 1;
+    			flag = false;
+    		}
+    		neighbor = generateRandomNeighbor(current);
+    		int neighborScore = evaluate(neighbor);
+    		if( neighborScore < currentScore ){
+        		searchCost++;
+    			current = copyOf(neighbor, current);
+    		} else if( neighborScore > currentScore ){
+    			double acceptanceProbability = acceptanceProbability(currentScore,neighborScore,t); 
+    			if( acceptanceProbability > Math.random() ){
+    	    		searchCost++;
+    				current = copyOf(neighbor, current);
+    			}
+    			searchCost = 0;
+    		}
+    		t=t*alpha;
+    	}
+    	return new int[]{searchCost, currentScore, solved};    	
     }
     
     public static void main(String[] args){
     	EightPuzzle p = new EightPuzzle();
 
-    	//p.printBoard();
-    	//System.out.println("Starting Score: "+p.evaluate(p.board));
-    	//p.hillClimbing();
-    	p.printBoard(p.hillClimbingRR()); 
+    	XSSFWorkbook workbook = new XSSFWorkbook();
+    	XSSFSheet sheet = workbook.createSheet("Algorithms");
+    	
+        Map<String, Object[]> data = new TreeMap<String, Object[]>();
+        data.put("1", new Object[] {"Search Cost", "Optimal Cost", "Is Solved"});    	
+    	for( int i=2; i<31; i++ ){
+    		int[] results = p.sA_results();
+    		System.out.println("Running:"+ i);
+    		System.out.println(results[0]+","+results[1]);
+    		data.put(Integer.toString(i), new Object[] {results[0], results[1], results[2]});
+    	}
+        //Iterate over data and write to sheet
+        Set<String> keyset = data.keySet();
+        int rownum = 0;
+        for (String key : keyset)
+        {
+            Row row = sheet.createRow(rownum++);
+            Object [] objArr = data.get(key);
+            int cellnum = 0;
+            for (Object obj : objArr)
+            {
+               Cell cell = row.createCell(cellnum++);
+               if(obj instanceof String)
+                    cell.setCellValue((String)obj);
+                else if(obj instanceof Integer)
+                    cell.setCellValue((Integer)obj);
+            }
+        }
+        try
+        {
+            //Write the workbook in file system
+            FileOutputStream out = new FileOutputStream(new File("simulated_annealing_results.xlsx"));
+            workbook.write(out);
+            out.close();
+            System.out.println("simulated_annealing_results saved");
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
     }
 }

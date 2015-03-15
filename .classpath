@@ -2,5 +2,10 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/Users/Salman/Documents/java_dev/poi-3.11-20141221.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Salman/Documents/java_dev/poi-excelant-3.11-20141221.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Salman/Documents/java_dev/poi-ooxml-3.11-20141221.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Salman/Documents/java_dev/poi-ooxml-schemas-3.11-20141221.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Salman/Documents/java_dev/xmlbeans-2.6.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
